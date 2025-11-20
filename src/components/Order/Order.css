@@ -1,0 +1,277 @@
+.cart {
+  background: white;
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-top: 30px;
+}
+
+.cart h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.empty-cart {
+  text-align: center;
+  padding: 60px 30px;
+}
+
+.empty-cart p {
+  color: #666;
+  font-size: 16px;
+}
+
+.cart-items {
+  border-bottom: 2px solid #eee;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.cart-item-info h4 {
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.cart-item-price {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+.cart-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px;
+}
+
+.quantity-control button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background-color: #f8f9fa;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.quantity-control button:hover {
+  background-color: #e9ecef;
+}
+
+.quantity-control span {
+  min-width: 30px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.cart-item-subtotal {
+  font-weight: bold;
+  color: #007bff;
+  min-width: 100px;
+  text-align: right;
+  margin: 0;
+}
+
+.remove-button {
+  background-color: #dc3545;
+  padding: 8px 16px;
+}
+
+.remove-button:hover {
+  background-color: #c82333;
+}
+
+.cart-summary {
+  margin-top: 20px;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.total-amount {
+  color: #007bff;
+  font-size: 24px;
+}
+
+.order-button {
+  width: 100%;
+  padding: 15px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+.order-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.order-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Order Status */
+.order-status {
+  background: white;
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-top: 30px;
+}
+
+.order-status h2 {
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.order-info {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  color: #666;
+  font-weight: 500;
+}
+
+.info-row .value {
+  color: #333;
+  font-weight: bold;
+}
+
+.state-badge {
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+.state-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.state-preparing {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.state-delivery {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.state-completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.state-failed {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Timeline */
+.status-timeline {
+  position: relative;
+  padding-left: 40px;
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 30px;
+  opacity: 0.4;
+}
+
+.timeline-item.completed {
+  opacity: 1;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -29px;
+  top: 20px;
+  bottom: -10px;
+  width: 2px;
+  background-color: #dee2e6;
+}
+
+.timeline-item.completed::before {
+  background-color: #28a745;
+}
+
+.timeline-item:last-child::before {
+  display: none;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -38px;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #dee2e6;
+  border: 3px solid white;
+  box-shadow: 0 0 0 2px #dee2e6;
+}
+
+.timeline-item.completed .timeline-marker {
+  background-color: #28a745;
+  box-shadow: 0 0 0 2px #28a745;
+}
+
+.timeline-content h4 {
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.timeline-content p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
