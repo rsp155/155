@@ -146,7 +146,7 @@ function VoiceOrder({ onComplete, onClose }) {
       let newChampagne = orderInfo.champagne;
 
       const baguetteMatch = text.match(/(바게트|바케트|빵).*(\d+)개/);
-      const champagneMatch = text.match(/샴페인.*(\d+)병/);
+      const champagneMatch = text.match(/샴페인.*?(\d+)\s*병/);
 
       if (baguetteMatch) {
         const num = parseInt(baguetteMatch[2], 10);
@@ -154,7 +154,7 @@ function VoiceOrder({ onComplete, onClose }) {
       }
 
       if (champagneMatch) {
-        const num = parseInt(champagneMatch[1] || champagneMatch[2], 10);
+        const num = parseInt(champagneMatch[1], 10);
         if (!isNaN(num)) newChampagne = num;
       }
 
