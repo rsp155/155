@@ -17,6 +17,17 @@ let menuItems = [
 // 인증
 app.post('/auth/register', (req, res) => {
   const { username, password, email, role } = req.body;
+  
+
+  const isDuplicate = users.some(
+    (user) => user.username === username || user.email === email
+  );
+
+  if (isDuplicate) {
+    return res.status(409).json({ error: '이미 등록된 아이디 또는 이메일입니다.' });
+  }
+
+
   const user_id = users.length + 1;
   users.push({ user_id, username, password, email, role });
   res.status(201).json({ message: 'User registered successfully', user_id });

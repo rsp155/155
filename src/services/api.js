@@ -1,5 +1,5 @@
 // API 기본 URL (환경 변수에서 가져오기)
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 // HTTP 요청 헬퍼 함수
 const fetchWithAuth = async (url, options = {}) => {

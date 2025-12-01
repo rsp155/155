@@ -38,7 +38,7 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
         setError('회원가입에 실패했습니다.');
       }
     } catch (err) {
-      setError('이미 존재하는 아이디이거나 오류가 발생했습니다.');
+      setError(err.message || '이미 존재하는 아이디이거나 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
