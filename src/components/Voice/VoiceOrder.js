@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const LLM_ENDPOINT = process.env.REACT_APP_LLM_ENDPOINT || 'http://localhost:11434/api/generate';
+const LLM_MODEL = process.env.REACT_APP_LLM_MODEL || 'llama3';
 
 function VoiceOrder({ onComplete, onClose }) {
   const [supported, setSupported] = useState(true);
@@ -19,8 +21,24 @@ function VoiceOrder({ onComplete, onClose }) {
     champagne: 1,
   });
   const [deliveryDate, setDeliveryDate] = useState('12월 2일');
+  const [llmNotice, setLlmNotice] = useState('오픈소스 LLM으로 주문 의도를 이해하고 있어요.');
 
   const recognitionRef = useRef(null);
+  const stepRef = useRef(step);
+  const orderInfoRef = useRef(orderInfo);
+  const deliveryDateRef = useRef(deliveryDate);
+
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
+
+  useEffect(() => {
+    orderInfoRef.current = orderInfo;
+  }, [orderInfo]);
+
+  useEffect(() => {
+    deliveryDateRef.current = deliveryDate;
+  }, [deliveryDate]);
 
   useEffect(() => {
     if (!SpeechRecognition) {
@@ -33,10 +51,15 @@ function VoiceOrder({ onComplete, onClose }) {
     recog.interimResults = false;
     recog.continuous = false;
 
-    recog.onresult = (event) => {
+    recog.onresult = async (event) => {
       const transcript = event.results[0][0].transcript.trim();
       addMessage('user', transcript);
-      handleUserResponse(transcript);
+      try {
+        await handleUserResponse(transcript);
+      } catch (err) {
+        console.error('handleUserResponse error', err);
+        addMessage('system', '응답을 이해하는 중 문제가 발생했습니다. 다시 말씀해 주세요.');
+      }
     };
 
     recog.onerror = (e) => {
@@ -58,6 +81,64 @@ function VoiceOrder({ onComplete, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const parseJsonSafe = (raw) => {
+    if (!raw) return null;
+    try {
+      const jsonLike = raw.match(/\{[\s\S]*\}/);
+      if (!jsonLike) return null;
+      return JSON.parse(jsonLike[0]);
+    } catch (err) {
+      console.error('LLM JSON parse error', err);
+      return null;
+    }
+  };
+
+  const interpretWithLlm = async (userText) => {
+    const prompt = `다음은 미스터 대박 디너 음성 주문 대화입니다. 사용자의 발화를 읽고 JSON만 반환하세요.\n\n` +
+      `발화: "${userText}"\n` +
+      `현재 주문 정보: ${JSON.stringify(orderInfoRef.current)}\n` +
+      `반환 형식 예시: {"intent":"recommend|event|choose_dinner|choose_style|adjust_quantity|confirm|finish",` +
+      `"dinner":"샴페인 축제 디너", "style":"deluxe", "baguette":6, "champagne":2, "deliveryDate":"내일", "isCorrect":true}` +
+      `\n필수 키: intent. 선택 키: dinner, style, baguette, champagne, deliveryDate, isCorrect.` +
+      `의도를 모르겠으면 intent:"unknown"으로 반환.`;
+
+    try {
+      const response = await fetch(LLM_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: LLM_MODEL,
+          prompt,
+          stream: false,
+          options: { temperature: 0.2 },
+        }),
+      });
+
+      if (!response.ok) {
+        setLlmNotice('LLM 호출에 실패했습니다. 기본 규칙으로 이해합니다.');
+        return null;
+      }
+
+      const data = await response.json();
+      const raw = data.response || data.choices?.[0]?.text || '';
+      const parsed = parseJsonSafe(raw);
+
+      if (!parsed) {
+        setLlmNotice('LLM 응답을 읽지 못했습니다. 기본 규칙으로 계속합니다.');
+      } else {
+        setLlmNotice(`LLM(${LLM_MODEL})가 의도를 파악했습니다.`);
+      }
+
+      return parsed;
+    } catch (err) {
+      console.error('LLM 호출 오류', err);
+      setLlmNotice('LLM 호출 오류가 발생했습니다. 기본 규칙으로 처리합니다.');
+      return null;
+    }
+  };
+
   const addMessage = (from, text) => {
     setMessages((prev) => [...prev, { from, text }]);
   };
@@ -68,12 +149,14 @@ function VoiceOrder({ onComplete, onClose }) {
     recognitionRef.current.start();
   };
 
-  const handleUserResponse = (text) => {
+  const handleUserResponse = async (text) => {
     const t = text.replace(/\s+/g, '');
+    const llmUnderstanding = await interpretWithLlm(text);
+    const currentStep = stepRef.current;
 
     // 0단계: 추천 요청 받기
-    if (step === 0) {
-      if (t.includes('맛있는') || t.includes('추천')) {
+    if (currentStep === 0) {
+      if (llmUnderstanding?.intent === 'recommend' || t.includes('맛있는') || t.includes('추천')) {
         addMessage('system', '무슨 기념일인가요? 생신, 생일 등 말씀해 주세요.');
         setStep(1);
       } else {
@@ -83,9 +166,12 @@ function VoiceOrder({ onComplete, onClose }) {
     }
 
     // 1단계: 기념일 질문에 답변
-    if (step === 1) {
-      if (t.includes('생신') || t.includes('생일')) {
-        if (t.includes('내일')) {
+    if (currentStep === 1) {
+      if (llmUnderstanding?.intent === 'event' || t.includes('생신') || t.includes('생일')) {
+        const llmDate = llmUnderstanding?.deliveryDate;
+        if (llmDate) {
+          setDeliveryDate(llmDate);
+        } else if (t.includes('내일')) {
           setDeliveryDate('내일');
         } else if (t.includes('모레')) {
           setDeliveryDate('모레');
@@ -100,14 +186,12 @@ function VoiceOrder({ onComplete, onClose }) {
     }
 
     // 2단계: 디너 선택
-    if (step === 2) {
-      if (t.includes('샴페인')) {
-        setOrderInfo((prev) => ({ ...prev, dinner: '샴페인 축제 디너' }));
-        addMessage('system', '샴페인 축제 디너 알겠습니다. 그리고 서빙은 디럭스 스타일 어떨까요?');
-        setStep(3);
-      } else if (t.includes('프렌치')) {
-        setOrderInfo((prev) => ({ ...prev, dinner: '프렌치 디너' }));
-        addMessage('system', '프렌치 디너 알겠습니다. 그리고 서빙은 디럭스 스타일 어떨까요?');
+    if (currentStep === 2) {
+      const dinnerIntent = llmUnderstanding?.dinner || (t.includes('샴페인') ? '샴페인 축제 디너' : null) || (t.includes('프렌치') ? '프렌치 디너' : null);
+
+      if (dinnerIntent) {
+        setOrderInfo((prev) => ({ ...prev, dinner: dinnerIntent }));
+        addMessage('system', `${dinnerIntent} 알겠습니다. 그리고 서빙은 디럭스 스타일 어떨까요?`);
         setStep(3);
       } else {
         addMessage('system', '발렌타인, 프렌치, 잉글리시, 샴페인 축제 디너 중에 골라주세요.');
@@ -116,8 +200,8 @@ function VoiceOrder({ onComplete, onClose }) {
     }
 
     // 3단계: 스타일 선택
-    if (step === 3) {
-      let style = null;
+    if (currentStep === 3) {
+      let style = llmUnderstanding?.style || null;
       if (t.includes('심플')) style = 'simple';
       else if (t.includes('그랜드')) style = 'grand';
       else if (t.includes('디럭스')) style = 'deluxe';
@@ -141,9 +225,9 @@ function VoiceOrder({ onComplete, onClose }) {
     }
 
     // 4단계: 바게트/샴페인 변경
-    if (step === 4) {
-      let newBaguette = orderInfo.baguette;
-      let newChampagne = orderInfo.champagne;
+    if (currentStep === 4) {
+      let newBaguette = llmUnderstanding?.baguette ?? orderInfoRef.current.baguette;
+      let newChampagne = llmUnderstanding?.champagne ?? orderInfoRef.current.champagne;
 
       const baguetteMatch = text.match(/(바게트|바케트|빵).*(\d+)개/);
       const champagneMatch = text.match(/샴페인.*?(\d+)\s*병/);
@@ -178,12 +262,13 @@ function VoiceOrder({ onComplete, onClose }) {
     }
 
     // 5단계: 최종 확인
-    if (step === 5) {
-      if (t.includes('맞아요') || t.includes('맞습니다') || t === '네') {
+    if (currentStep === 5) {
+      const confirmed = llmUnderstanding?.isCorrect || t.includes('맞아요') || t.includes('맞습니다') || t === '네';
+      if (confirmed) {
         addMessage('system', '추가로 필요하신 것 있으세요?');
 
         if (onComplete) {
-          onComplete(orderInfo);
+          onComplete(orderInfoRef.current);
         }
         setStep(6);
       } else {
@@ -194,9 +279,9 @@ function VoiceOrder({ onComplete, onClose }) {
     }
 
     // 6단계: 추가 요구 확인 후 종료 안내
-    if (step === 6) {
-      if (t.includes('없어요') || t.includes('없습니다') || t.includes('끝')) {
-        addMessage('system', `${deliveryDate}에 주문하신 대로 보내드리겠습니다. 감사합니다.`);
+    if (currentStep === 6) {
+      if (llmUnderstanding?.intent === 'finish' || t.includes('없어요') || t.includes('없습니다') || t.includes('끝')) {
+        addMessage('system', `${deliveryDateRef.current}에 주문하신 대로 보내드리겠습니다. 감사합니다.`);
         setStep(7);
       } else {
         addMessage('system', '추가로 변경할 내용이 있으면 말씀해 주세요.');
@@ -224,6 +309,8 @@ function VoiceOrder({ onComplete, onClose }) {
           </div>
         ))}
       </div>
+
+      <div className="voice-llm-status">{llmNotice}</div>
 
       <div className="voice-controls">
         <button onClick={startListening} disabled={listening}>
